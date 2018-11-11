@@ -33,7 +33,7 @@ class App extends React.Component {
         <AnyReactComponent 
           lat={30.2863743} 
           lng={-97.7368889} 
-          text={'GDC'} 
+          text={'CS BUILDING'} 
         />
       </GoogleMapReact>
 
