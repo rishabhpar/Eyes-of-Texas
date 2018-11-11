@@ -19,8 +19,8 @@ const AnyReactComponent = ({ text }) => (
 
 class App extends React.Component {
   static defaultProps = {
-    center: {lat: 30.2863743, lng: -97.7368889},
-    zoom: 11
+    center: {lat: 30.284860, lng: -97.736679},
+    zoom: 16
   };
 
   render() {
@@ -34,6 +34,41 @@ class App extends React.Component {
           lat={30.2863743} 
           lng={-97.7368889} 
           text={'CS BUILDING'} 
+        />
+        <AnyReactComponent 
+          lat={30.289148} 
+          lng={-97.736512} 
+          text={'RLM'} 
+        />
+        <AnyReactComponent 
+          lat={30.286386} 
+          lng={-97.739369} 
+          text={'Main Building'} 
+        />
+        <AnyReactComponent 
+          lat={30.286933} 
+          lng={-97.741139} 
+          text={'Texas Union'} 
+        />
+        <AnyReactComponent 
+          lat={30.286396} 
+          lng={-97.740309} 
+          text={'FAC'} 
+        />
+        <AnyReactComponent 
+          lat={30.290033} 
+          lng={-97.735380} 
+          text={'ETC'} 
+        />
+        <AnyReactComponent 
+          lat={30.290227} 
+          lng={-97.736046} 
+          text={'CPE'} 
+        />
+        <AnyReactComponent 
+          lat={30.284860} 
+          lng={-97.736679} 
+          text={'SAC'} 
         />
       </GoogleMapReact>
 
