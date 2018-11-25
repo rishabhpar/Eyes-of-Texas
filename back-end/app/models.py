@@ -2,6 +2,7 @@ from app import app, db, bcrypt
 from geoalchemy2 import Geography
 import datetime
 import jwt
+import json
 
 
 favorites_events = db.Table('favorites_events', db.Model.metadata,
@@ -180,10 +181,47 @@ class Event(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     title = db.Column(db.String(128), nullable=False)
     location = db.Column(Geography(geometry_type='POINT', srid=4326))
-    vote_count = db.Column(db.Integer)
     time_of_event = db.Column(db.DateTime, nullable=False)
     time_posted = db.Column(db.DateTime, nullable=False)
     desc = db.Column(db.String)
+    sponsored = db.Column(db.Boolean)
+    poster = db.relationship("User", backref="posted_events")
+
+    #TODO: check what happens SQL injection with long and lat
+    #TODO: check what happens if string is too long, empty etc
+
+    def __init__(self, user_id, title, time_event, desc, long, lat, sponsored=False):
+        self.user_id = user_id
+        self.title = title
+        self.time_posted = datetime.datetime.utcnow()
+        self.location = 'POINT(%f %f)' % (long, lat)
+        self.time_of_event = datetime.datetime.strptime(time_event)
+        self.desc = desc
+        self.sponsored = sponsored
+
+
+    def save(self):
+        db.session.add(self)
+        db.session.commit()
+
+
+    def json(self):
+        return {
+            "id": self.id,
+            "poster": self.poster.username,
+            "title": self.title,
+            "longitude": db.session.scalar(self.location.ST_X()),
+            "latitude": db.session.scalar(self.location.ST_Y()),
+            "time_of_event": self.time_of_event.isoformat(),
+            "time_posted": self.time_posted.isoformat(),
+            "desc": self.desc,
+            "sponsored": self.sponsored,
+            "votes": Vote.vote_count(id)
+        }
+
+
+
+
 
 
 class Category(db.Model):
@@ -207,11 +245,22 @@ class Category(db.Model):
         db.session.commit()
 
 
+    @staticmethod
+    def get_list():
+        list = []
+        for name in Category.query(Category.name):
+            list.append(name)
+        return str(list)
+
+
+
 
 class Vote(db.Model):
     """
     Class that keeps track of upvotes"""
     __tablename__ = 'votes'
+
+    #TODO: add primary key?
 
     event_id = db.Column(db.Integer, db.ForeignKey('events.id'), index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
@@ -240,6 +289,16 @@ class Vote(db.Model):
         if vote:
             vote.delete()
             db.session.commit()
+
+
+    @staticmethod
+    def user_voted(event_id, user_id):
+        return db.session.query(Vote.query.filter_by(user_id=user_id, event_id = event_id).exists()).scalar()
+
+
+    @staticmethod
+    def vote_count(event_id):
+        return Vote.query.filter_by(event_id=event_id).count()
 
 
 
