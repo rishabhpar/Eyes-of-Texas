@@ -1,6 +1,13 @@
 from app import app, db, bcrypt
+from geoalchemy2 import Geography
 import datetime
 import jwt
+
+
+favorites_events = db.Table('favorites_events', db.Model.metadata,
+    db.Column('user_id', db.Integer, db.ForeignKey('users.id'), primary_key=True),
+    db.Column('event_id', db.Integer, db.ForeignKey('events.id'), primary_key=True)
+)
 
 
 class User(db.Model):
@@ -13,13 +20,17 @@ class User(db.Model):
     email = db.Column(db.String(255), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
     registered_on = db.Column(db.DateTime, nullable=False)
+    username = db.Column(db.String(255), unique=True, nullable=False)
+    favorites = db.relationship("Event", secondary=favorites_events)
+
     buckets = db.relationship('Bucket', backref='bucket', lazy='dynamic')
 
-    def __init__(self, email, password):
+    def __init__(self, email, password, username):
         self.email = email
         self.password = bcrypt.generate_password_hash(password, app.config.get('BCRYPT_LOG_ROUNDS')) \
             .decode('utf-8')
         self.registered_on = datetime.datetime.now()
+        self.username = username
 
     def save(self):
         """
@@ -52,6 +63,23 @@ class User(db.Model):
             )
         except Exception as e:
             return e
+
+
+    def favorite_event(self, event_id):
+        #TODO: check what happens if user has already favorited this event
+        event = Event.query.filter_by(id=event_id).first()
+        if event:
+            self.favorites.append(event)
+            db.session.commit()
+
+
+    def remove_favorite(self, event_id):
+        #TODO: check what happens if user has never favorited this event
+        event = Event.query.filter_by(id=event_id).first()
+        if event:
+            self.favorites.remove(event)
+            db.session.commit()
+
 
     @staticmethod
     def decode_auth_token(token):
@@ -88,6 +116,7 @@ class User(db.Model):
         :return:
         """
         return User.query.filter_by(email=email).first()
+
 
     def reset_password(self, new_password):
         """
@@ -133,6 +162,89 @@ class BlackListToken(db.Model):
         if response:
             return True
         return False
+
+
+event_category = db.Table('event_category', db.Model.metadata,
+    db.Column('category_id', db.Integer, db.ForeignKey('categories.id'), primary_key=True),
+    db.Column('event_id', db.Integer, db.ForeignKey('events.id'), primary_key=True)
+)
+
+
+class Event(db.Model):
+    """
+    Class that represents events
+    """
+    __tablename__ = 'events'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    title = db.Column(db.String(128), nullable=False)
+    location = db.Column(Geography(geometry_type='POINT', srid=4326))
+    vote_count = db.Column(db.Integer)
+    time_of_event = db.Column(db.DateTime, nullable=False)
+    time_posted = db.Column(db.DateTime, nullable=False)
+    desc = db.Column(db.String)
+
+
+class Category(db.Model):
+    """
+    Class that represents the various categories an event can have
+    """
+    __tablename__ = 'categories'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(20), unique=True, nullable=False)
+    events = db.relationship("Event", secondary=event_category, backref="categories")
+
+    #TODO: see what happens if you try to create a duplicate category
+
+    def __init__(self, name):
+        self.name = name
+        
+
+    def save(self):
+        db.session.add(self)
+        db.session.commit()
+
+
+
+class Vote(db.Model):
+    """
+    Class that keeps track of upvotes"""
+    __tablename__ = 'votes'
+
+    event_id = db.Column(db.Integer, db.ForeignKey('events.id'), index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
+
+    def __init__(self, event_id, user_id):
+        self.event_id = event_id
+        self.user_id = user_id
+
+
+    def save(self):
+        db.session.add(self)
+        db.session.commit()
+
+
+    @staticmethod
+    def upvote(event_id, user_id):
+        vote = Vote.query.filter_by(user_id=user_id, event_id=event_id).first()
+        if not vote:
+            vote = Vote(event_id=event_id, user_id=user_id)
+            vote.save()
+    
+
+    @staticmethod
+    def removeVote(event_id, user_id):
+        vote = Vote.query.filter_by(user_id=user_id, event_id=event_id).first()
+        if vote:
+            vote.delete()
+            db.session.commit()
+
+
+
+
+
 
 
 class Bucket(db.Model):
