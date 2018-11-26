@@ -1,7 +1,6 @@
 from app import app, db, bcrypt
 from sqlalchemy.ext.hybrid import hybrid_property
 from geoalchemy2 import Geography
-from app.event.helper import list_categories
 import datetime
 import jwt
 import json
@@ -228,6 +227,7 @@ class Event(db.Model):
 
 
     def json(self, current_user):
+        from app.event.helper import list_categories
         return {
             "id": self.id,
             "poster": User.query.filter_by(id=user_id).first().username,
@@ -283,6 +283,9 @@ class Vote(db.Model):
     """
     Class that keeps track of upvotes"""
     __tablename__ = 'votes'
+    __table_args__ = (
+        db.PrimaryKeyConstraint('event_id', 'user_id'),
+    )
 
     #TODO: add primary key?
 
