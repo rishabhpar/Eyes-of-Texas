@@ -38,3 +38,7 @@ app.register_blueprint(bucket, url_prefix='/v1')
 from app.bucketitems.views import bucketitems
 
 app.register_blueprint(bucketitems, url_prefix='/v1')
+
+from app.event.views import event
+
+app.register_blueprint(event, url_prefix='/v1')

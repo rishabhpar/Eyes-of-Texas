@@ -1,5 +1,7 @@
 from app import app, db, bcrypt
+from sqlalchemy.ext.hybrid import hybrid_property
 from geoalchemy2 import Geography
+from app.event.helper import list_categories
 import datetime
 import jwt
 import json
@@ -22,7 +24,7 @@ class User(db.Model):
     password = db.Column(db.String(255), nullable=False)
     registered_on = db.Column(db.DateTime, nullable=False)
     username = db.Column(db.String(255), unique=True, nullable=False)
-    favorites = db.relationship("Event", secondary=favorites_events)
+    favorites = db.relationship("Event", secondary=favorites_events, lazy='dynamic')
 
     buckets = db.relationship('Bucket', backref='bucket', lazy='dynamic')
 
@@ -72,6 +74,8 @@ class User(db.Model):
         if event:
             self.favorites.append(event)
             db.session.commit()
+            return True
+        return False
 
 
     def remove_favorite(self, event_id):
@@ -80,6 +84,8 @@ class User(db.Model):
         if event:
             self.favorites.remove(event)
             db.session.commit()
+            return True
+        return False
 
 
     @staticmethod
@@ -185,19 +191,22 @@ class Event(db.Model):
     time_posted = db.Column(db.DateTime, nullable=False)
     desc = db.Column(db.String)
     sponsored = db.Column(db.Boolean)
-    poster = db.relationship("User", backref="posted_events")
+    votes = db.relationship("Vote", lazy='dynamic')
 
     #TODO: check what happens SQL injection with long and lat
     #TODO: check what happens if string is too long, empty etc
 
-    def __init__(self, user_id, title, time_event, desc, long, lat, sponsored=False):
+    def __init__(self, user_id, title, time_event, desc, lng, lat, categories, sponsored=False):
         self.user_id = user_id
         self.title = title
         self.time_posted = datetime.datetime.utcnow()
-        self.location = 'POINT(%f %f)' % (long, lat)
+        self.location = 'POINT(%f %f)' % (lng, lat)
         self.time_of_event = datetime.datetime.strptime(time_event)
         self.desc = desc
         self.sponsored = sponsored
+        for category in categories:
+            self.categories.append(category)
+        
 
 
     def save(self):
@@ -205,10 +214,23 @@ class Event(db.Model):
         db.session.commit()
 
 
-    def json(self):
+    @hybrid_property
+    def vote_count(self):
+        #return len(self.children)   # @note: use when non-dynamic relationship
+        return self.votes.count()# @note: use when dynamic relationship
+
+    @vote_count.expression
+    def vote_count(cls):
+        return (select([func.count(User.id)]).
+                where(Event.id == cls.id).
+                label("vote_count")
+                )
+
+
+    def json(self, current_user):
         return {
             "id": self.id,
-            "poster": self.poster.username,
+            "poster": User.query.filter_by(id=user_id).first().username,
             "title": self.title,
             "longitude": db.session.scalar(self.location.ST_X()),
             "latitude": db.session.scalar(self.location.ST_Y()),
@@ -216,7 +238,9 @@ class Event(db.Model):
             "time_posted": self.time_posted.isoformat(),
             "desc": self.desc,
             "sponsored": self.sponsored,
-            "votes": Vote.vote_count(id)
+            "votes": self.vote_count,
+            "user_has_voted": Vote.user_voted(self.id, current_user.id),
+            "categories": list_categories(self.categories)
         }
 
 
@@ -232,7 +256,7 @@ class Category(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(20), unique=True, nullable=False)
-    events = db.relationship("Event", secondary=event_category, backref="categories")
+    events = db.relationship("Event", secondary=event_category, backref="categories", lazy='dynamic')
 
     #TODO: see what happens if you try to create a duplicate category
 
@@ -281,24 +305,23 @@ class Vote(db.Model):
         if not vote:
             vote = Vote(event_id=event_id, user_id=user_id)
             vote.save()
+            return True
+        return False
     
 
     @staticmethod
-    def removeVote(event_id, user_id):
+    def remove_vote(event_id, user_id):
         vote = Vote.query.filter_by(user_id=user_id, event_id=event_id).first()
         if vote:
             vote.delete()
             db.session.commit()
+            return True
+        return False
 
 
     @staticmethod
     def user_voted(event_id, user_id):
         return db.session.query(Vote.query.filter_by(user_id=user_id, event_id = event_id).exists()).scalar()
-
-
-    @staticmethod
-    def vote_count(event_id):
-        return Vote.query.filter_by(event_id=event_id).count()
 
 
 
