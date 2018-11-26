@@ -24,10 +24,11 @@ class RegisterUser(MethodView):
             post_data = request.get_json()
             email = post_data.get('email')
             password = post_data.get('password')
-            if re.match(r"[^@]+@[^@]+\.[^@]+", email) and len(password) > 4:
+            username = post_data.get('username')
+            if re.match(r"[^@]+@[^@]+\.[^@]+", email) and len(password) > 4 and len(username) > 3:
                 user = User.get_by_email(email)
                 if not user:
-                    token = User(email=email, password=password).save()
+                    token = User(email=email, password=password, username=username).save()
                     return response_auth('success', 'Successfully registered', token, 201)
                 else:
                     return response('failed', 'Failed, User already exists, Please sign In', 400)

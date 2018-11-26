@@ -9,3 +9,5 @@ event.favorite_event_list                          GET,OPTIONS,HEAD     /v1/favo
 event.unfavorite_event                             POST,OPTIONS         /v1/unfavorite/[event_id]
 event.unvote_event                                 POST,OPTIONS         /v1/unvote/[event_id]
 event.vote_event                                   POST,OPTIONS         /v1/vote/[event_id]
+event.view_categories                              OPTIONS,HEAD,GET     /v1/categories/
+event.create_category                              POST,OPTIONS         /v1/categories/

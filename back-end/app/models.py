@@ -200,11 +200,16 @@ class Event(db.Model):
         self.title = title
         self.time_posted = datetime.datetime.utcnow()
         self.location = 'POINT(%f %f)' % (lng, lat)
-        self.time_of_event = datetime.datetime.strptime(time_event)
+        self.time_of_event = datetime.datetime.strptime(time_event, "%Y-%m-%dT%H:%M:%SZ")
         self.desc = desc
         self.sponsored = sponsored
         for category in categories:
-            self.categories.append(category)
+            cat = Category.query.filter_by(name=category).first()
+            if cat:
+                self.categories.append(cat)
+            else:
+                cat = Category(name=category)
+                self.categories.append(cat)
         
 
 
@@ -220,9 +225,9 @@ class Event(db.Model):
 
     @vote_count.expression
     def vote_count(cls):
-        return (select([func.count(User.id)]).
+        return (db.select([db.func.count(User.id)]).
                 where(Event.id == cls.id).
-                label("vote_count")
+                label("votes")
                 )
 
 
@@ -230,7 +235,7 @@ class Event(db.Model):
         from app.event.helper import list_categories
         return {
             "id": self.id,
-            "poster": User.query.filter_by(id=user_id).first().username,
+            "poster": User.query.filter_by(id=self.user_id).first().username,
             "title": self.title,
             "longitude": db.session.scalar(self.location.ST_X()),
             "latitude": db.session.scalar(self.location.ST_Y()),
@@ -272,9 +277,15 @@ class Category(db.Model):
     @staticmethod
     def get_list():
         list = []
-        for name in Category.query(Category.name):
-            list.append(name)
-        return str(list)
+        for category in Category.query:
+            list.append(category.name)
+        return list
+
+
+    @staticmethod
+    def create_category(name):
+        category = Category(name)
+        category.save()
 
 
 
@@ -314,7 +325,7 @@ class Vote(db.Model):
 
     @staticmethod
     def remove_vote(event_id, user_id):
-        vote = Vote.query.filter_by(user_id=user_id, event_id=event_id).first()
+        vote = Vote.query.filter_by(user_id=user_id, event_id=event_id)
         if vote:
             vote.delete()
             db.session.commit()

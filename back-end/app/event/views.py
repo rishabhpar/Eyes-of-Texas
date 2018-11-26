@@ -1,12 +1,13 @@
 from flask import Blueprint, request, make_response, jsonify
 from app.auth.helper import token_required
-from app.event.helper import get_events, get_event_json_list, response_with_pagination, response
-from app.models import User, Event
+from app.event.helper import get_events, get_event_json_list, response_with_pagination, \
+response, response_for_category_list, response_for_created_event
+from app.models import User, Event, Category, Vote
 
 # Initialize blueprint
 event = Blueprint('event', __name__)
 
-@event.route('/events/', methods=['GET'])
+@event.route('/events', methods=['GET'])
 @token_required
 def events(current_user):
     """
@@ -24,11 +25,12 @@ def events(current_user):
     lng = request.args.get('lng', None, type=float)
     lat = request.args.get('lat', None, type=float)
     rad = request.args.get('rad', 1000, type=int)
+    category = request.args.get('cat', None, type=str) 
 
     if not lng or not lat:
         return response('failed', 'Missing params longitude/latitude', 400)
 
-    events = get_events(lng, lat, rad)
+    events = get_events(lng, lat, category, rad)
 
     if events:
         return response_with_pagination(get_event_json_list(events, current_user), None, None)
@@ -36,7 +38,7 @@ def events(current_user):
     return response_with_pagination([], None, None)
 
 
-@event.route('/events/', methods=['POST'])
+@event.route('/events', methods=['POST'])
 @token_required
 def create_event(current_user):
     """
@@ -105,9 +107,30 @@ def unvote_event(current_user, event_id):
     return response('failed', 'Could not unvote event', 400)
 
 
+@event.route('/categories', methods=['POST'])
+@token_required
+def create_category(current_user):
+    if request.content_type == 'application/json':
+        data = request.get_json()
+        name = data.get('name')
+        if name:
+            Category.create_category(name)
+            return response('success', "Category created", 200)
+
+        return response('failed', 'Missing name', 400)
+
+    return response('failed', 'Content-type must be json', 202)
+
+
+@event.route('/categories', methods=['GET'])
+@token_required
+def view_categories(current_user):
+    return response_for_category_list(Category.get_list())
+
+
 #TODO: test how this works with empty favorites, etc etc
 
-@event.route('/favorites/', methods=['GET'])
+@event.route('/favorites', methods=['GET'])
 @token_required
 def favorite_event_list(current_user):
     return response_with_pagination(get_event_json_list(current_user.favorites, current_user), None, None)

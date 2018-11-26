@@ -1,6 +1,6 @@
 from flask import make_response, jsonify, url_for
-from app import app
-from app.models import Event, Vote
+from app import app, db
+from app.models import Event, Vote, Category
 from geoalchemy2.elements import WKTElement
 
 
@@ -55,11 +55,25 @@ def response_for_created_event(event):
     })), 201
 
 
-def get_events(lng, lat, radius=1000):
+#Purpose is for listing all categories
+def response_for_category_list(categories):
+    return make_response(jsonify({
+        'status': 'success',
+        'categories': categories
+    })), 201
+
+
+def get_events(lng, lat, cat, radius=1000):
     center = WKTElement('POINT({0} {1})'.format(lng, lat), srid=4326)
+    if cat:
+        category = Category.query.filter_by(name=cat).first()
+        if category:
+            return category.events.filter(db.func.ST_DWITHIN(Event.location, center, radius)).order_by(Event.vote_count)
+        return None
     return Event.query.filter(db.func.ST_DWITHIN(Event.location, center, radius)).order_by(Event.vote_count)
 
 
+#Lists categories for given event
 def list_categories(query):
     arr = []
     for category in query:
