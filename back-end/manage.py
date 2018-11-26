@@ -1,3 +1,4 @@
+from flask import url_for
 from flask_script import Manager
 from flask_migrate import Migrate, MigrateCommand
 from app import app, db, models
@@ -26,11 +27,11 @@ def list_routes():
 
         methods = ','.join(rule.methods)
         url = url_for(rule.endpoint, **options)
-        line = urllib.unquote("{:50s} {:20s} {}".format(rule.endpoint, methods, url))
+        line = urllib.parse.unquote("{:50s} {:20s} {}".format(rule.endpoint, methods, url))
         output.append(line)
 
     for line in sorted(output):
-        print line
+        print(line)
 
 # # Test coverage configuration
 # COV = coverage.coverage(

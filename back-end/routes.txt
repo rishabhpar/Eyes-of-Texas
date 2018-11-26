@@ -1,0 +1,11 @@
+auth.login                                         POST,OPTIONS         /v1/auth/login
+auth.logout                                        POST,OPTIONS         /v1/auth/logout
+auth.register                                      POST,OPTIONS         /v1/auth/register
+auth.reset_password                                POST,OPTIONS         /v1/auth/reset/password
+event.create_event                                 POST,OPTIONS         /v1/events/
+event.events                                       GET,OPTIONS,HEAD     /v1/events/
+event.favorite_event                               POST,OPTIONS         /v1/favorite/[event_id]
+event.favorite_event_list                          GET,OPTIONS,HEAD     /v1/favorites/
+event.unfavorite_event                             POST,OPTIONS         /v1/unfavorite/[event_id]
+event.unvote_event                                 POST,OPTIONS         /v1/unvote/[event_id]
+event.vote_event                                   POST,OPTIONS         /v1/vote/[event_id]
