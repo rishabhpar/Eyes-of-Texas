@@ -1,79 +1,134 @@
-import React, { Component } from 'react';
-import GoogleMapReact from 'google-map-react';
+import React, { Component, Fragment } from "react";
+import { Link, withRouter } from "react-router-dom";
+import { Nav, Navbar, NavItem } from "react-bootstrap";
+import { LinkContainer } from "react-router-bootstrap";
+import Routes from "./Routes";
+import axios from 'axios'
+import "./App.css";
 
-const AnyReactComponent = ({ text }) => (
-  <div style={{
-    color: 'white', 
-    background: 'grey',
-    padding: '15px 10px',
-    display: 'inline-flex',
-    textAlign: 'center',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: '100%',
-    transform: 'translate(-50%, -50%)'
-  }}>
-    {text}
-  </div>
-);
+class App extends Component {
 
-class App extends React.Component {
-  static defaultProps = {
-    center: {lat: 30.284860, lng: -97.736679},
-    zoom: 16
-  };
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      token: null
+    };
+  }
+
+  setToken = tokenVal => {
+    this.setState({ token: tokenVal });
+  }
+
+  handleLogout = event => {
+    console.log("Current token is " + this.state.token);
+    axios.post("http://127.0.0.1:5000/v1/auth/logout", {}, {
+      headers: {
+          "Content-Type": 'application/json',
+          "Authorization": "Bearer " + this.state.token
+      }
+    })
+    .then(response => {
+      this.setToken(null);
+      this.props.history.push("/login");
+    })
+    .catch(error => {
+      alert("Could not Logout");
+    });
+  }
 
   render() {
-    return (
-       <GoogleMapReact
-        bootstrapURLKeys={{ key: "AIzaSyBq7hr78P_D2vJS2WImC_veBLP4J7-m1rU" }}
-        defaultCenter={this.props.center}
-        defaultZoom={this.props.zoom}
-      >
-        <AnyReactComponent 
-          lat={30.2863743} 
-          lng={-97.7368889} 
-          text={'CS BUILDING'} 
-        />
-        <AnyReactComponent 
-          lat={30.289148} 
-          lng={-97.736512} 
-          text={'RLM'} 
-        />
-        <AnyReactComponent 
-          lat={30.286386} 
-          lng={-97.739369} 
-          text={'Main Building'} 
-        />
-        <AnyReactComponent 
-          lat={30.286933} 
-          lng={-97.741139} 
-          text={'Texas Union'} 
-        />
-        <AnyReactComponent 
-          lat={30.286396} 
-          lng={-97.740309} 
-          text={'FAC'} 
-        />
-        <AnyReactComponent 
-          lat={30.290033} 
-          lng={-97.735380} 
-          text={'ETC'} 
-        />
-        <AnyReactComponent 
-          lat={30.290227} 
-          lng={-97.736046} 
-          text={'CPE'} 
-        />
-        <AnyReactComponent 
-          lat={30.284860} 
-          lng={-97.736679} 
-          text={'SAC'} 
-        />
-      </GoogleMapReact>
 
+    const childProps = {
+      token: this.state.token,
+      setToken: this.setToken
+    };
+
+    return (
+      <div className="App container">
+        <Navbar fluid collapseOnSelect>
+          <Navbar.Header>
+            <Navbar.Brand>
+              <Link to="/">Scratch</Link>
+            </Navbar.Brand>
+            <Navbar.Toggle />
+          </Navbar.Header>
+          <Navbar.Collapse>
+            <Nav pullRight>
+              {this.state.token != null
+                ? <NavItem onClick={this.handleLogout}>Logout</NavItem>
+                : <Fragment>
+                    <LinkContainer to="/signup">
+                      <NavItem>Signup</NavItem>
+                    </LinkContainer>
+                    <LinkContainer to="/login">
+                      <NavItem>Login</NavItem>
+                    </LinkContainer>
+                  </Fragment>
+              }
+            </Nav>
+          </Navbar.Collapse>
+        </Navbar>
+        <Routes childProps={childProps} />
+      </div>
     );
   }
 }
 
-export default App;
+export default withRouter(App);
+// import React, { Component } from 'react';
+// import GoogleMapReact from 'google-map-react';
+// import axios from 'axios'
+// import Login from './Login'
+
+// const AnyReactComponent = ({ text }) => (
+//   <div style={{
+//     color: 'white', 
+//     background: 'blue',
+//     padding: '15px 10px',
+//     display: 'inline-flex',
+//     textAlign: 'center',
+//     alignItems: 'center',
+//     justifyContent: 'center',
+//     borderRadius: '100%',
+//     transform: 'translate(-50%, -50%)'
+//   }}>
+//     {text}
+//   </div>
+// );
+
+// var config = {
+//   headers: {'Authorization': "bearer " + "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJleHAiOjE1NDM0NTU0ODYsImlhdCI6MTU0MzM2OTA2Niwic3ViIjoxfQ.rvDUP3_AJ1qCtsadz_xXr_JIIFKmGWghthqZsEdt6aY"}
+// };
+
+// class App extends React.Component {
+//   static defaultProps = {
+//     center: {lat: 30.284860, lng: -97.736679},
+//     zoom: 16
+//   };
+
+//   componentDidMount() {
+//     axios.get('http://127.0.0.1:5000/v1/events?lat=33.058890&lng=-96.658260&cat=food&rad=0', config)
+//     .then(function (response) {
+//       // handle success
+//       console.log(response.data);
+//     })
+//     .catch(function (error) {
+//       // handle error
+//       console.log(error);
+//     })
+//     .then(function () {
+//       // always executed
+//     });
+//   }
+
+//   render() {
+//     return (
+
+//        <Login></Login>
+
+//     );
+//   }
+// }
+
+// export default App;
