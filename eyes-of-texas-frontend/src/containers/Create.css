@@ -1,0 +1,10 @@
+@media all and (min-width: 480px) {
+    .Create {
+      padding: 60px 0;
+    }
+  
+    .Create form {
+      margin: 0 auto;
+      max-width: 320px;
+    }
+  }

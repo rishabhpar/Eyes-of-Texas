@@ -1,6 +1,6 @@
 import React, { Component, Fragment } from "react";
 import { Link, withRouter } from "react-router-dom";
-import { Nav, Navbar, NavItem } from "react-bootstrap";
+import { Nav, Navbar, NavItem, NavDropdown, MenuItem } from "react-bootstrap";
 import { LinkContainer } from "react-router-bootstrap";
 import Routes from "./Routes";
 import axios from 'axios'
@@ -13,7 +13,8 @@ class App extends Component {
 
     this.state = {
       token: null,
-      event: null
+      event: null,
+      newEvents: null
     };
   }
 
@@ -22,25 +23,66 @@ class App extends Component {
   }
 
   setEvent = eventVal => {
-    this.setState({ event: eventVal});
+    this.setState({ event: eventVal });
+  }
+
+  selected = select => {
+    let t = this;
+    if (select != "all") {
+      navigator.geolocation.getCurrentPosition(function (position) {
+        console.log("Current location " + position.coords.latitude + " " + position.coords.longitude);
+        t.setState({"center": [position.coords.latitude, position.coords.longitude]})
+        console.log("TOKENNN " + t.state.token);
+        axios.get("http://127.0.0.1:5000/v1/events", {
+          "headers": { 
+            "Authorization": "Bearer " + t.state.token
+          },
+          "params": {
+            "lat": position.coords.latitude,
+            "lng": position.coords.longitude,
+            "rad": 10000,
+            "cat": select
+          }
+        })
+        .then(response => { 
+          console.log('Setting')
+          console.log(response.data.events)
+          t.setState({"newEvents": response.data.events})
+        })
+      })
+    }
+    else {
+      console.log("Reset")
+      this.setState({newEvents: null});
+    }
+  
+    
   }
 
   handleLogout = event => {
     console.log("Current token is " + this.state.token);
     axios.post("http://127.0.0.1:5000/v1/auth/logout", {}, {
       headers: {
-          "Content-Type": 'application/json',
-          "Authorization": "Bearer " + this.state.token
+        "Content-Type": 'application/json',
+        "Authorization": "Bearer " + this.state.token
       }
     })
-    .then(response => {
-      this.setToken(null);
-      this.props.history.push("/login");
-    })
-    .catch(error => {
-      alert("Could not Logout");
-    });
+      .then(response => {
+        this.setToken(null);
+        this.setState({upEvent: null})
+        this.props.history.push("/login");
+      })
+      .catch(error => {
+        alert("Could not Logout");
+      });
   }
+
+  upEvent = event => { 
+    console.log("Calling upevent");
+    return this.state.newEvents;
+  }
+
+
 
   render() {
 
@@ -48,7 +90,8 @@ class App extends Component {
       token: this.state.token,
       setToken: this.setToken,
       setEvent: this.setEvent,
-      event: this.state.event
+      event: this.state.event,
+      upEvent: this.state.newEvents
     };
 
     return (
@@ -63,15 +106,27 @@ class App extends Component {
           <Navbar.Collapse>
             <Nav pullRight>
               {this.state.token != null
-                ? <NavItem onClick={this.handleLogout}>Logout</NavItem>
-                : <Fragment>
-                    <LinkContainer to="/signup">
-                      <NavItem>Signup</NavItem>
+                ? <Fragment>
+                    <NavDropdown eventKey="4" title="Category" id="nav-dropdown" onSelect={this.selected}>
+                      <MenuItem eventKey="all">All</MenuItem>
+                      <MenuItem eventKey="food">Food</MenuItem>
+                      <MenuItem eventKey="study">Study</MenuItem>
+                      <MenuItem eventKey="party">Party</MenuItem>
+                    </NavDropdown>
+                    <LinkContainer to="/create">
+                      <NavItem>Create</NavItem>
                     </LinkContainer>
-                    <LinkContainer to="/login">
-                      <NavItem>Login</NavItem>
-                    </LinkContainer>
+                    <NavItem>Feed</NavItem> 
+                    <NavItem onClick={this.handleLogout}>Logout</NavItem>
                   </Fragment>
+                : <Fragment>
+                  <LinkContainer to="/signup">
+                    <NavItem>Signup</NavItem>
+                  </LinkContainer>
+                  <LinkContainer to="/login">
+                    <NavItem>Login</NavItem>
+                  </LinkContainer>
+                </Fragment>
               }
             </Nav>
           </Navbar.Collapse>
