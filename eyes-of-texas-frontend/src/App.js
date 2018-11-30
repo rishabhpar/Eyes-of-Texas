@@ -12,12 +12,17 @@ class App extends Component {
     super(props);
 
     this.state = {
-      token: null
+      token: null,
+      event: null
     };
   }
 
   setToken = tokenVal => {
     this.setState({ token: tokenVal });
+  }
+
+  setEvent = eventVal => {
+    this.setState({ event: eventVal});
   }
 
   handleLogout = event => {
@@ -41,7 +46,9 @@ class App extends Component {
 
     const childProps = {
       token: this.state.token,
-      setToken: this.setToken
+      setToken: this.setToken,
+      setEvent: this.setEvent,
+      event: this.state.event
     };
 
     return (
@@ -49,7 +56,7 @@ class App extends Component {
         <Navbar fluid collapseOnSelect>
           <Navbar.Header>
             <Navbar.Brand>
-              <Link to="/">Scratch</Link>
+              <Link to="/">Eyes of Texas</Link>
             </Navbar.Brand>
             <Navbar.Toggle />
           </Navbar.Header>
